@@ -1,0 +1,242 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind, chi2_contingency, f_oneway, ttest_rel
+import statsmodels.api as sm
+------------------------------------------------------------------------------------------------------------------------------------------
+# File path
+file_path = r"C:\Users\risha\OneDrive\Desktop\Dissertation\Exploring the Role of Data Analytics in E-commerce_ Customer Behavior and Preferences (Responses) (1).xlsx"
+
+# Load the updated dataset
+survey_data = pd.read_excel(file_path)
+------------------------------------------------------------------------------------------------------------------------------------------------
+# Display basic information
+print(survey_data.head())
+print(survey_data.isnull().sum())
+print(survey_data.dtypes)
+-----------------------------------------------------------------------------------------------------------------------------------------------
+# Save the cleaned dataset for reference
+output_path = r"C:\Users\risha\OneDrive\Desktop\Cleaned_Survey_Data.csv"
+survey_data.to_csv(output_path, index=False)
+print(f"Cleaned data saved to {output_path}")
+--------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 1: Device Usage Distribution
+sns.countplot(data=survey_data, x='Which device do you primarily use for online shopping?')
+plt.title('Device Usage Distribution')
+plt.xlabel('Device Type')
+plt.ylabel('Frequency')
+plt.xticks(rotation=45)
+plt.show()
+---------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 2: Satisfaction Levels
+survey_data['How satisfied are you with the relevance of personalized recommendations?'].value_counts().plot.pie(
+    autopct='%1.1f%%', startangle=90, cmap='coolwarm')
+plt.title('Satisfaction with Personalized Recommendations')
+plt.ylabel('')  # Removes the default y-label
+plt.show()
+---------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 3: Satisfaction vs Purchase Likelihood
+sns.scatterplot(data=survey_data, 
+                x='How satisfied are you with the relevance of personalized recommendations?', 
+                y='How likely are you to purchase products recommended to you by e-commerce platforms?',
+                color='blue')
+plt.title('Satisfaction vs Purchase Likelihood')
+plt.xlabel('Satisfaction Level')
+plt.ylabel('Purchase Likelihood')
+plt.show()
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 4: Influential Factors in Purchase Decisions
+sns.countplot(data=survey_data, 
+              y='What factors most influence your decision to make a purchase online?', 
+              order=survey_data['What factors most influence your decision to make a purchase online?'].value_counts().index)
+plt.title('Influential Factors in Purchase Decisions')
+plt.xlabel('Frequency')
+plt.ylabel('Factors')
+plt.show()
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 5: Trust vs Privacy Concerns
+sns.scatterplot(data=survey_data, 
+                x='Do you trust e-commerce platforms to use your data responsibly?', 
+                y='How concerned are you about your data privacy on e-commerce platforms?', 
+                size='What is your approximate monthly online shopping expenditure?', 
+                sizes=(20, 200), alpha=0.7)
+plt.title('Trust vs Privacy Concerns')
+plt.xlabel('Trust Level')
+plt.ylabel('Privacy Concern Level')
+plt.legend(title='Monthly Expenditure')
+plt.show()
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 6: Fairness Perception of Dynamic Pricing
+sns.histplot(data=survey_data, 
+             x='How fair do you find dynamic pricing strategies in e-commerce?', 
+             kde=True, bins=10, color='orange')
+plt.title('Fairness Perception of Dynamic Pricing')
+plt.xlabel('Fairness Level')
+plt.ylabel('Frequency')
+plt.show()
+----------------------------------------------------------------------------------------------------------------------------------------------------
+# Visualization 7: Effective Promotions by Age Group
+sns.countplot(data=survey_data, 
+              x='What type of promotions are most effective in encouraging you to shop?', 
+              hue='What is your age group?')
+plt.title('Effective Promotions by Age Group')
+plt.xlabel('Promotion Type')
+plt.ylabel('Frequency')
+plt.legend(title='Age Group')
+plt.xticks(rotation=45)
+plt.show()
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+import pandas as pd
+from scipy.stats import ttest_ind
+
+# Define a mapping from text to numeric values
+text_to_numeric_mapping = {
+    "Very Unlikely": 1,
+    "Unlikely": 2,
+    "Neutral": 3,
+    "Likely": 4,
+    "Very Likely": 5
+}
+
+# Create a temporary numeric column for the t-test
+survey_data['Temp_Numeric_Purchase_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(text_to_numeric_mapping)
+
+# Drop rows with NaN values (in case of unmapped values)
+survey_data = survey_data.dropna(subset=[
+    'Do you trust e-commerce platforms to use your data responsibly?',
+    'Temp_Numeric_Purchase_Likelihood'
+])
+
+# Filter groups based on trust levels
+group_trust = survey_data[survey_data['Do you trust e-commerce platforms to use your data responsibly?'] == 'Yes']
+group_no_trust = survey_data[survey_data['Do you trust e-commerce platforms to use your data responsibly?'] == 'No']
+
+# Perform the t-test
+t_stat, p_value = ttest_ind(
+    group_trust['Temp_Numeric_Purchase_Likelihood'],
+    group_no_trust['Temp_Numeric_Purchase_Likelihood'],
+    equal_var=False  # Welch's T-test
+)
+
+print(f"T-statistic: {t_stat}, P-value: {p_value}")
+
+# Interpret the result
+if p_value < 0.05:
+    print("There is a statistically significant difference between the two groups.")
+else:
+    print("No statistically significant difference between the two groups.")
+
+# Drop the temporary column after the test to preserve the original data
+survey_data = survey_data.drop(columns=['Temp_Numeric_Purchase_Likelihood'])
+----------------------------------------------------------------------------------------------------------------------------------------------------
+from scipy.stats import chi2_contingency
+
+# Create a contingency table
+contingency_table = pd.crosstab(
+    survey_data['Which device do you primarily use for online shopping?'], 
+    survey_data['What is your gender?']
+)
+
+# Perform the Chi-Square Test
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+
+print(f"Chi-Square Statistic: {chi2_stat}")
+print(f"P-value: {p_value}")
+print(f"Degrees of Freedom: {dof}")
+
+if p_value < 0.05:
+    print("There is a significant association between device type and gender.")
+else:
+    print("No significant association between device type and gender.")
+------------------------------------------------------------------------------------------------------------------------------------------------
+from scipy.stats import ttest_rel
+
+# Map satisfaction and purchase likelihood levels to numeric values
+text_to_numeric_mapping_satisfaction = {
+    "Very Dissatisfied": 1,
+    "Dissatisfied": 2,
+    "Neutral": 3,
+    "Satisfied": 4,
+    "Very Satisfied": 5
+}
+
+text_to_numeric_mapping_likelihood = {
+    "Very Unlikely": 1,
+    "Unlikely": 2,
+    "Neutral": 3,
+    "Likely": 4,
+    "Very Likely": 5
+}
+
+# Create temporary numeric columns
+survey_data['Temp_Numeric_Satisfaction'] = survey_data[
+    'How satisfied are you with the relevance of personalized recommendations?'
+].map(text_to_numeric_mapping_satisfaction)
+
+survey_data['Temp_Numeric_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(text_to_numeric_mapping_likelihood)
+
+# Perform the paired T-test
+t_stat, p_value = ttest_rel(
+    survey_data['Temp_Numeric_Satisfaction'], 
+    survey_data['Temp_Numeric_Likelihood']
+)
+
+print(f"T-statistic: {t_stat}")
+print(f"P-value: {p_value}")
+
+if p_value < 0.05:
+    print("There is a significant difference between satisfaction and purchase likelihood.")
+else:
+    print("No significant difference between satisfaction and purchase likelihood.")
+
+# Drop temporary columns after the test
+survey_data = survey_data.drop(columns=['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood'])
+------------------------------------------------------------------------------------------------------------------------------------------------
+import statsmodels.api as sm
+
+# Map satisfaction and purchase likelihood levels to numeric values
+text_to_numeric_mapping_satisfaction = {
+    "Very Dissatisfied": 1,
+    "Dissatisfied": 2,
+    "Neutral": 3,
+    "Satisfied": 4,
+    "Very Satisfied": 5
+}
+
+text_to_numeric_mapping_likelihood = {
+    "Very Unlikely": 1,
+    "Unlikely": 2,
+    "Neutral": 3,
+    "Likely": 4,
+    "Very Likely": 5
+}
+
+# Create temporary numeric columns
+survey_data['Temp_Numeric_Satisfaction'] = survey_data[
+    'How satisfied are you with the relevance of personalized recommendations?'
+].map(text_to_numeric_mapping_satisfaction)
+
+survey_data['Temp_Numeric_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(text_to_numeric_mapping_likelihood)
+
+# Define dependent and independent variables
+X = survey_data['Temp_Numeric_Satisfaction']
+y = survey_data['Temp_Numeric_Likelihood']
+
+# Add a constant for regression
+X = sm.add_constant(X)
+
+# Fit the regression model
+model = sm.OLS(y, X).fit()
+
+# Display summary
+print(model.summary())
+
+# Drop temporary columns after the regression
+survey_data = survey_data.drop(columns=['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood'])
+---------------------------------------------------------------------------------------------------------------------------------------------------
