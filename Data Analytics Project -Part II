@@ -240,3 +240,165 @@ print(model.summary())
 # Drop temporary columns after the regression
 survey_data = survey_data.drop(columns=['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood'])
 ---------------------------------------------------------------------------------------------------------------------------------------------------
+import pandas as pd
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Map satisfaction and purchase likelihood levels to numeric values (reuse mapping from earlier code)
+survey_data['Temp_Numeric_Satisfaction'] = survey_data[
+    'How satisfied are you with the relevance of personalized recommendations?'
+].map(text_to_numeric_mapping_satisfaction)
+
+survey_data['Temp_Numeric_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(text_to_numeric_mapping_likelihood)
+
+# Prepare independent variables (X) and dependent variable (y)
+X = survey_data[['Temp_Numeric_Satisfaction']]  # Add more predictors if available
+y = survey_data['Temp_Numeric_Likelihood']
+
+# Add a constant for regression
+X = sm.add_constant(X)
+
+# Calculate the correlation matrix
+correlation_matrix = survey_data[['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood']].corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix for Survey Data')
+plt.show()
+
+# Calculate VIF for each predictor
+vif_data = pd.DataFrame()
+vif_data["Feature"] = X.columns
+vif_data["VIF"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+print("Variance Inflation Factor (VIF):")
+print(vif_data)
+------------------------------------------------------------------------------------------------------------------------------
+# Fit the regression model again with necessary changes (if any)
+model = sm.OLS(y, X).fit()
+
+# Display updated regression summary
+print("Updated Regression Model Summary:")
+print(model.summary())
+
+# Diagnostic Plots
+from statsmodels.graphics.regressionplots import plot_regress_exog
+
+# Plot regression diagnostics for each predictor
+for predictor in ['Temp_Numeric_Satisfaction']:
+    fig = plot_regress_exog(model, predictor)
+    fig.tight_layout()
+    plt.show()
+
+# Drop temporary columns after analysis
+survey_data = survey_data.drop(columns=['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood'])
+---------------------------------------------------------------------------------------------------------------------------------
+from scipy.stats import ttest_ind
+
+# Define numeric mapping for purchase likelihood
+text_to_numeric_mapping = {
+    "Very Unlikely": 1,
+    "Unlikely": 2,
+    "Neutral": 3,
+    "Likely": 4,
+    "Very Likely": 5
+}
+
+# Temporary numeric column for purchase likelihood
+survey_data['Temp_Numeric_Purchase_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(text_to_numeric_mapping)
+
+# Filter trust levels
+group_trust = survey_data[survey_data['Do you trust e-commerce platforms to use your data responsibly?'] == 'Yes']
+group_no_trust = survey_data[survey_data['Do you trust e-commerce platforms to use your data responsibly?'] == 'No']
+
+# Conduct Welch's T-Test
+t_stat, p_value = ttest_ind(
+    group_trust['Temp_Numeric_Purchase_Likelihood'],
+    group_no_trust['Temp_Numeric_Purchase_Likelihood'],
+    equal_var=False  # Welch's Test
+)
+
+print(f"T-statistic: {t_stat}, P-value: {p_value}")
+
+# Clean up the temporary column
+survey_data.drop(columns=['Temp_Numeric_Purchase_Likelihood'], inplace=True)
+---------------------------------------------------------------------------------------------------------------------------------
+from scipy.stats import chi2_contingency
+
+# Create contingency table
+contingency_table = pd.crosstab(
+    survey_data['Which device do you primarily use for online shopping?'], 
+    survey_data['What is your gender?']
+)
+
+# Conduct Chi-Square Test
+chi2_stat, p_value, dof, expected = chi2_contingency(contingency_table)
+
+print(f"Chi-Square Statistic: {chi2_stat}, P-value: {p_value}, Degrees of Freedom: {dof}")
+-------------------------------------------------------------------------------------------------------------------------------
+from scipy.stats import ttest_rel
+
+# Define numeric mappings
+satisfaction_mapping = {
+    "Very Dissatisfied": 1, "Dissatisfied": 2, "Neutral": 3, "Satisfied": 4, "Very Satisfied": 5
+}
+likelihood_mapping = {
+    "Very Unlikely": 1, "Unlikely": 2, "Neutral": 3, "Likely": 4, "Very Likely": 5
+}
+
+# Temporary numeric columns
+survey_data['Temp_Numeric_Satisfaction'] = survey_data[
+    'How satisfied are you with the relevance of personalized recommendations?'
+].map(satisfaction_mapping)
+
+survey_data['Temp_Numeric_Likelihood'] = survey_data[
+    'How likely are you to purchase products recommended to you by e-commerce platforms?'
+].map(likelihood_mapping)
+
+# Conduct Paired T-Test
+t_stat, p_value = ttest_rel(
+    survey_data['Temp_Numeric_Satisfaction'], 
+    survey_data['Temp_Numeric_Likelihood']
+)
+
+print(f"T-statistic: {t_stat}, P-value: {p_value}")
+
+# Clean up temporary columns
+survey_data.drop(columns=['Temp_Numeric_Satisfaction', 'Temp_Numeric_Likelihood'], inplace=True)
+--------------------------------------------------------------------------------------------------------------------------------
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Simulating a portion of the dataset (replace with actual data)
+data = {
+    "Satisfaction Level": ["Satisfied", "Neutral", "Dissatisfied", "Very Satisfied", "Very Dissatisfied"] * 10,
+    "Purchase Likelihood": ["Very Likely", "Likely", "Neutral", "Unlikely", "Very Unlikely"] * 10
+}
+survey_data = pd.DataFrame(data)
+
+# Creating a pivot table for heatmap aggregation
+heatmap_data = survey_data.pivot_table(
+    index="Purchase Likelihood",
+    columns="Satisfaction Level",
+    aggfunc='size',
+    fill_value=0
+)
+
+# Plotting the heatmap
+plt.figure(figsize=(10, 6))
+sns.heatmap(
+    heatmap_data,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    cbar=True
+)
+plt.title("Heatmap: Satisfaction vs Purchase Likelihood")
+plt.xlabel("Satisfaction Level")
+plt.ylabel("Purchase Likelihood")
+plt.tight_layout()
+plt.show()
+----------------------------------------------------------------------------------------------------------------------------------
